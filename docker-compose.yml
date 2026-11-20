@@ -1,0 +1,43 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: graph_poc
+    command: >
+      postgres -c shared_buffers=512MB -c work_mem=32MB
+               -c maintenance_work_mem=256MB -c max_parallel_workers_per_gather=2
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d graph_poc"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "55432:5432"
+
+  poc:
+    build:
+      context: .
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: graph_poc
+      SEED: "42"
+      RUNS: "200"
+    volumes:
+      - ./reports:/app/reports
+      - ./docs:/app/docs
+    command: ["python", "-m", "src.pipeline"]
+
+volumes:
+  pgdata:

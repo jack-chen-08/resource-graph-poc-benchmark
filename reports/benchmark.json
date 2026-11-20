@@ -1,0 +1,354 @@
+{
+ "seed": 42,
+ "sample_seed": 7,
+ "runs": 200,
+ "warmup": 10,
+ "q4_hit_rate": 0.006,
+ "env": {
+  "cpu_count": 8,
+  "mem_gb": 15.6,
+  "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41",
+  "python": "3.12.16",
+  "pg_version": "16.16 (Debian 16.16-1.pgdg12+1)",
+  "pgvector_version": "0.8.7",
+  "shared_buffers": "512MB",
+  "work_mem": "32MB"
+ },
+ "gen": {
+  "nodes": 20000,
+  "edges": 100000,
+  "vectors": 8000,
+  "seconds": 8.1
+ },
+ "plan_b_build": {
+  "seconds": 7.1,
+  "closure2": {
+   "rows": 120823,
+   "size": "7856 kB"
+  },
+  "org_reach3": {
+   "rows": 305740,
+   "size": "40 MB"
+  },
+  "need_org": {
+   "rows": 4279,
+   "size": "408 kB"
+  },
+  "node": {
+   "rows": 20000,
+   "size": "58 MB"
+  }
+ },
+ "plan_a": {
+  "q1": {
+   "runs": 200,
+   "p50_ms": 2.76,
+   "p95_ms": 3.89,
+   "avg_ms": 2.86,
+   "min_ms": 0.28,
+   "max_ms": 4.58,
+   "rows_avg": 19.7,
+   "rows_p95": 39,
+   "errors": 0
+  },
+  "q2": {
+   "runs": 200,
+   "p50_ms": 0.42,
+   "p95_ms": 0.77,
+   "avg_ms": 0.47,
+   "min_ms": 0.28,
+   "max_ms": 1.42,
+   "rows_avg": 4.2,
+   "rows_p95": 8,
+   "errors": 0
+  },
+  "q3": {
+   "runs": 200,
+   "p50_ms": 17.3,
+   "p95_ms": 19.83,
+   "avg_ms": 17.76,
+   "min_ms": 16.32,
+   "max_ms": 37.52,
+   "rows_avg": 1.2,
+   "rows_p95": 2,
+   "errors": 0
+  },
+  "q4": {
+   "runs": 200,
+   "p50_ms": 0.35,
+   "p95_ms": 0.57,
+   "avg_ms": 0.38,
+   "min_ms": 0.25,
+   "max_ms": 0.87,
+   "rows_avg": 1.0,
+   "rows_p95": 1,
+   "errors": 0
+  }
+ },
+ "plan_b": {
+  "q1": {
+   "runs": 200,
+   "p50_ms": 0.34,
+   "p95_ms": 0.64,
+   "avg_ms": 0.4,
+   "min_ms": 0.24,
+   "max_ms": 1.1,
+   "rows_avg": 19.7,
+   "rows_p95": 39,
+   "errors": 0
+  },
+  "q2": {
+   "runs": 200,
+   "p50_ms": 0.23,
+   "p95_ms": 0.32,
+   "avg_ms": 0.24,
+   "min_ms": 0.21,
+   "max_ms": 0.43,
+   "rows_avg": 4.2,
+   "rows_p95": 8,
+   "errors": 0
+  },
+  "q3": {
+   "runs": 200,
+   "p50_ms": 17.2,
+   "p95_ms": 21.65,
+   "avg_ms": 18.08,
+   "min_ms": 16.47,
+   "max_ms": 39.53,
+   "rows_avg": 1.2,
+   "rows_p95": 2,
+   "errors": 0
+  },
+  "q4": {
+   "runs": 200,
+   "p50_ms": 0.24,
+   "p95_ms": 0.39,
+   "avg_ms": 0.27,
+   "min_ms": 0.2,
+   "max_ms": 0.77,
+   "rows_avg": 1.0,
+   "rows_p95": 1,
+   "errors": 0
+  }
+ },
+ "evidence": {
+  "A": {
+   "q1": {
+    "indexes": [
+     "idx_edge_rel_src"
+    ],
+    "node_types": [
+     "CTE Scan",
+     "Group",
+     "Hash",
+     "Hash Join",
+     "Index Scan",
+     "Nested Loop",
+     "Recursive Union",
+     "Seq Scan",
+     "Sort",
+     "WorkTable Scan"
+    ],
+    "exec_ms": 3.1
+   },
+   "q2": {
+    "indexes": [
+     "idx_edge_src_rel",
+     "idx_edge_dst_rel"
+    ],
+    "node_types": [
+     "Aggregate",
+     "Index Scan",
+     "Limit",
+     "Nested Loop",
+     "Sort"
+    ],
+    "exec_ms": 0.33
+   },
+   "q3": {
+    "indexes": [
+     "idx_node_type",
+     "idx_edge_dst_rel",
+     "node_pkey"
+    ],
+    "node_types": [
+     "Bitmap Heap Scan",
+     "Bitmap Index Scan",
+     "CTE Scan",
+     "Hash",
+     "Hash Join",
+     "Index Scan",
+     "Limit",
+     "Nested Loop",
+     "Sort"
+    ],
+    "exec_ms": 18.5
+   },
+   "q4": {
+    "indexes": [
+     "idx_edge_rel_src"
+    ],
+    "node_types": [
+     "CTE Scan",
+     "Index Scan",
+     "Limit",
+     "Nested Loop",
+     "Recursive Union",
+     "Sort",
+     "WorkTable Scan"
+    ],
+    "exec_ms": 0.25
+   }
+  },
+  "B": {
+   "q1": {
+    "indexes": [
+     "idx_closure2_src",
+     "node_pkey"
+    ],
+    "node_types": [
+     "Bitmap Heap Scan",
+     "Bitmap Index Scan",
+     "Index Scan",
+     "Nested Loop",
+     "Sort",
+     "Unique"
+    ],
+    "exec_ms": 0.05
+   },
+   "q2": {
+    "indexes": [
+     "idx_need_org"
+    ],
+    "node_types": [
+     "Index Scan",
+     "Limit"
+    ],
+    "exec_ms": 0.02
+   },
+   "q3": {
+    "indexes": [
+     "idx_node_type",
+     "idx_edge_dst_rel",
+     "node_pkey"
+    ],
+    "node_types": [
+     "Bitmap Heap Scan",
+     "Bitmap Index Scan",
+     "CTE Scan",
+     "Hash",
+     "Hash Join",
+     "Index Scan",
+     "Limit",
+     "Nested Loop",
+     "Sort"
+    ],
+    "exec_ms": 25.27
+   },
+   "q4": {
+    "indexes": [
+     "idx_reach3_src_dst"
+    ],
+    "node_types": [
+     "Index Scan"
+    ],
+    "exec_ms": 0.04
+   }
+  }
+ },
+ "ef_sweep": [
+  {
+   "ef_search": 40,
+   "rows": 72000,
+   "p50_ms": 1.8,
+   "p95_ms": 2.3,
+   "recall": 0.594,
+   "runs": 15
+  },
+  {
+   "ef_search": 100,
+   "rows": 72000,
+   "p50_ms": 3.0,
+   "p95_ms": 3.9,
+   "recall": 0.703,
+   "runs": 15
+  },
+  {
+   "ef_search": 200,
+   "rows": 72000,
+   "p50_ms": 4.9,
+   "p95_ms": 6.2,
+   "recall": 0.847,
+   "runs": 15
+  }
+ ],
+ "scale": [
+  {
+   "rows": 8000,
+   "exact_p50_ms": 21.33,
+   "exact_p95_ms": 21.91,
+   "ann_p50_ms": 3.13,
+   "ann_p95_ms": 4.06,
+   "speedup": 6.8,
+   "recall": 0.625,
+   "index_build_s": 7.6,
+   "runs": 15
+  },
+  {
+   "rows": 24000,
+   "exact_p50_ms": 63.89,
+   "exact_p95_ms": 67.32,
+   "ann_p50_ms": 2.62,
+   "ann_p95_ms": 3.54,
+   "speedup": 24.4,
+   "recall": 0.748,
+   "index_build_s": 19.7,
+   "runs": 15
+  },
+  {
+   "rows": 72000,
+   "exact_p50_ms": 191.78,
+   "exact_p95_ms": 207.18,
+   "ann_p50_ms": 2.92,
+   "ann_p95_ms": 3.58,
+   "speedup": 65.6,
+   "recall": 0.703,
+   "index_build_s": 57.9,
+   "runs": 15
+  }
+ ],
+ "verdicts": [
+  {
+   "query": "q1",
+   "plan": "A",
+   "target": "两跳查询 P95 < 300 ms",
+   "limit_ms": 300.0,
+   "p95_ms": 3.89,
+   "met": true
+  },
+  {
+   "query": "q1",
+   "plan": "B",
+   "target": "两跳查询 P95 < 300 ms",
+   "limit_ms": 300.0,
+   "p95_ms": 0.64,
+   "met": true
+  },
+  {
+   "query": "q4",
+   "plan": "A",
+   "target": "最短路径 P95 < 1 s",
+   "limit_ms": 1000.0,
+   "p95_ms": 0.57,
+   "met": true
+  },
+  {
+   "query": "q4",
+   "plan": "B",
+   "target": "最短路径 P95 < 1 s",
+   "limit_ms": 1000.0,
+   "p95_ms": 0.39,
+   "met": true
+  }
+ ]
+}
