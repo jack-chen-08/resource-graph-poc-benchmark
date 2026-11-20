@@ -1,6 +1,6 @@
 # 测试方法：怎么验证这份报告里的每个说法
 
-报告里的数字都可以用下面四条命令复核，不需要读代码。所有命令都在 `docker compose` 里跑，
+报告里的数字都可以用下面几条命令复核，不需要读代码。所有命令都在 `docker compose` 里跑，
 不依赖宿主机装 Postgres 或 Python 库。
 
 ```bash
@@ -15,6 +15,15 @@ cat docs/BENCHMARK.md
 
 # 4) 看机器可读结果，自己算任意统计量
 cat reports/benchmark.json
+
+# 5) 写侧代价：方案 B 每新增一条关系要付多少（约 1 分钟，出报告第 11 节）
+docker compose run --rm poc python -m src.write_bench
+
+# 6) Q4 补测：把「有路径 / 无路径」分开（约 1 分钟，出报告第 12 节）
+docker compose run --rm poc python -m src.path_bench
+
+# 7) 用已有 reports/*.json 重出报告（不重跑压测）
+docker compose run --rm poc python -m src.report reports/benchmark.json
 ```
 
 ## 自检到底查了什么

@@ -1,6 +1,6 @@
 # 资源图谱 POC：两种建模范式的实测对比
 
-一个可一键跑起来的 Postgres 17 + pgvector 环境，用**同一批虚构数据**（20,000 节点 / 100,000 关系）
+一个可一键跑起来的 PostgreSQL 16 + pgvector 环境，用**同一批虚构数据**（20,000 节点 / 100,000 关系）
 把资源图谱的两种建模范式跑一遍，给出四类目标查询的 P50 / P95 实测值，并说明哪种范式在什么规模下更划算。
 
 - 方案 A（建模层）：单张关系表 `node` / `edge` + 递归 CTE，查询时实时展开邻接边。
@@ -26,6 +26,7 @@ docker compose up --build          # 建库 → 造数 → 跑两个方案 → �
 
 ```bash
 docker compose run --rm poc python -m src.selftest   # 自检：数据规模 / 两方案结果等价 / 目标阈值
+docker compose run --rm poc python -m src.write_bench # 写侧代价：方案 B 每加一条关系要付多少
 docker compose down -v                               # 连数据卷一起清掉，回到干净状态
 make psql                                            # 进 psql 手动查
 ```
@@ -35,7 +36,7 @@ make psql                                            # 进 psql 手动查
 ## 目录
 
 ```
-docker-compose.yml        Postgres 17 + pgvector 与一次性 POC 容器
+docker-compose.yml        PostgreSQL 16 (pgvector) 与一次性 POC 容器
 Dockerfile                POC 运行环境（python:3.12-slim）
 sql/schema_plan_a.sql     基础结构：node / edge 与索引（方案 A 的全部表）
 src/gen_data.py           虚构数据生成（固定种子，规模可调）
@@ -43,6 +44,7 @@ src/queries.py            四类目标查询的 SQL + 参数采样器（两方�
 src/plan_b.py             方案 B 的预计算与索引构建
 src/bench.py              压测、执行计划取证、ANN 调参
 src/scale_test.py         规模外推：精确扫描 vs HNSW 的交叉点
+src/write_bench.py        写侧代价：新增一条关系时预计算表的维护开销
 src/report.py             报告生成（Markdown + JSON）
 src/selftest.py           自检
 docs/BENCHMARK.md         实测报告

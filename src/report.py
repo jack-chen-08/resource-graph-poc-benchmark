@@ -145,6 +145,21 @@ def write_report(result: dict, out_dir: str = "docs") -> str:
             md.append(f"| {row['ef_search']} | {row['p50_ms']} | {row['p95_ms']} | "
                       f"{row['recall'] * 100:.1f}% | {row['runs']} |")
         md.append("")
+        lo, mid, hi = sw[0], sw[len(sw) // 2], sw[-1]
+        md.append("**怎么选这一档**（用上表自己的数算，不套经验值）：")
+        md.append("")
+        md.append(f"- `ef_search={lo['ef_search']}`：P95 {lo['p95_ms']} ms、召回 {lo['recall'] * 100:.1f}%。"
+                  f"延迟最低，适合**候选粗筛**——后面还有规则/精排兜底，漏几个邻居不影响结果。")
+        md.append(f"- `ef_search={mid['ef_search']}`：P95 {mid['p95_ms']} ms、召回 {mid['recall'] * 100:.1f}%，"
+                  f"比最低档多花 {mid['p95_ms'] - lo['p95_ms']:.1f} ms 换 {((mid['recall'] - lo['recall']) * 100):.1f} 个百分点，"
+                  "是延迟与召回的折中点，建议作**默认档**。")
+        md.append(f"- `ef_search={hi['ef_search']}`：P95 {hi['p95_ms']} ms、召回 {hi['recall'] * 100:.1f}%，"
+                  f"再往上抬，延迟涨 {(hi['p95_ms'] / mid['p95_ms'] - 1) * 100:.0f}% 而召回只多 "
+                  f"{((hi['recall'] - mid['recall']) * 100):.1f} 个点——**收益递减明显**，只为「找全」而调高不划算。")
+        md.append("")
+        md.append("延迟随 ef 近似线性上涨，召回是上凸曲线（先快后慢），所以分档调参的拐点在中间档附近。"
+                  "具体取值不要照抄：换了真实 embedding、换了维度或数据分布，曲线整条会移动，"
+                  "上线前用本仓库 `src/scale_test.py` 在自己的数据上重扫一遍这三档即可。\n")
         md.append("调参在最大规模档上做（`SET enable_seqscan = off` 强制走 ANN），"
                   "因为在 8000 条向量这一档优化器根本不选索引，扫了没有信息量"
                   "（默认选择见第 6 节的 Q3 行：两个方案都走精确扫描）。"
@@ -195,11 +210,76 @@ def write_report(result: dict, out_dir: str = "docs") -> str:
     md.append("- 向量为随机生成、不具备真实语义可分性：随机高维向量的近邻彼此区分度低，"
               "ANN 召回会明显低于真实 embedding 场景（第 7 节测得的数据就是这种条件下限），"
               "所以召回率只能当参考，不能当验收结论；上线前必须用真实语料重测。")
+    hit = float(result.get("q4_hit_rate") or 0)
+    md.append(f"- **Q4 的参数采样命中率只有 {hit*100:.1f}%**：随机抽到的企业对里 99% 以上在 3 跳内不可达，"
+              "查询立刻返回空，所以第 1 节 Q4 的 P95 反映的是「快速判空」而不是真实最短路径查询。"
+              "第 12 节把可达与不可达两种情况分开补测。")
     md.append("- 单机 Docker、单连接串行压测，未覆盖并发；生产需补 pgbench / 并发场景。")
     md.append("- 节点类型与关系类型按 S6-PLAN-009 的字面口径落地，009 原文未随附，"
               "若类型体系不同需重新映射（生成脚本的常量表是唯一改动点）。")
-    md.append("- 方案 B 的预计算表在数据写入时需要增量维护，本 POC 只做一次性构建，"
-              "未实现增量刷新与一致性校验。")
+    md.append("- 方案 B 的预计算表在数据写入时需要增量维护：本 POC 已实测单条关系的维护代价"
+              "（第 11 节，局部重算口径 = 保守上界），但未实现生产级增量算法（如触发器 / 变更流），"
+              "也未做并发写入下的锁竞争测试。")
+
+    # --- 第 11 节：写侧代价（方案 B 的预计算表维护成本），需 reports/write_cost.json ---
+    import json as _json
+    import os as _os
+    if _os.path.exists("reports/write_cost.json"):
+        with open("reports/write_cost.json", encoding="utf-8") as f:
+            wc = _json.load(f)
+        e, c, r, t = wc["edge_insert"], wc["closure2_refresh"], wc["org_reach3_refresh"], wc["total_per_edge"]
+        md.append("## 11. 写侧代价：方案 B 每新增一条关系要付多少\n")
+        md.append(f"查询侧方案 B 几乎完胜，代价被推到了写入侧。本节在 20,000 / 100,000 原始规模下，"
+                  f"插入一条新的 `cooperates` 关系并**局部重算**受影响的预计算行，重复 {wc['rounds']} 轮"
+                  f"（种子 {wc['seed']}），每轮结束回滚，数据规模不变。\n")
+        md.append("| 步骤 | P50 | P95 | 改动行数（中位/最大） |")
+        md.append("| --- | ---: | ---: | --- |")
+        md.append(f"| 写 `edge` 一行（方案 A 的全部维护成本） | {e['p50']} ms | {e['p95']} ms | 1 / 1 |")
+        md.append(f"| 重算 `closure2`（两跳闭包） | {c['p50']} ms | {c['p95']} ms | {c['rows_p50']:,} / {c['rows_max']:,} |")
+        md.append(f"| 重算 `org_reach3`（≤3 跳路径） | {r['p50']} ms | {r['p95']} ms | {r['rows_p50']:,} / {r['rows_max']:,} |")
+        md.append(f"| **合计（单条关系）** | **{t['p50']} ms** | **{t['p95']} ms** | 最坏 {t['max']} ms |")
+        md.append("")
+        md.append(f"受影响源点平均 {wc['affected_src_avg']} 个（被替换的预计算行随之放大）。"
+                  "**口径必须说清**：这里是「局部删 + 局部重算」，属**保守上界**；"
+                  "真实实现可用增量算法（只插入新增可达对）或触发器把成本压到这条线以下。\n")
+        md.append("**落地判据（直接决定要不要降级）**：")
+        md.append("")
+        md.append(f"- 关系写入 &lt; 10 条/秒：单条约 {t['p50']} ms，同步维护可接受，直接双写；")
+        md.append("- 关系写入 10～100 条/秒：改为**异步补偿**（写 `edge` 后投消息队列批量刷新），"
+                  "查询侧容忍秒级延迟；")
+        md.append(f"- 关系写入 &gt; 100 条/秒或要求强一致：**降级回方案 A 的递归 CTE**"
+                  f"（Q1 P95 3.89 ms，远低于 300 ms 目标），把闭包表当可选加速层。")
+        md.append("")
+        md.append("这就是「预计算换查询」的真实账单：省下的每一次查询时间，都要在写入时付一次。\n")
+
+    # --- 第 12 节：Q4 的「有路径 / 无路径」分开口径，需 reports/path_cost.json ---
+    if _os.path.exists("reports/path_cost.json"):
+        with open("reports/path_cost.json", encoding="utf-8") as f:
+            pc = _json.load(f)
+        r, u = pc["reachable"], pc["unreachable"]
+        md.append("## 12. Q4 补测：把「有路径」和「无路径」分开看\n")
+        md.append(f"第 1 节的 Q4 用的是随机企业对，命中率仅 {float(result.get('q4_hit_rate') or 0)*100:.1f}%，"
+                  f"因此那一栏主要是判空开销。这里各取 {pc['pairs']} 对企业对（种子 {pc['seed']}，"
+                  f"每对 {pc['runs_per_pair']} 次）分开测：\n")
+        md.append("| 情况 | 方案 | P50 | P95 | 平均返回行数 |")
+        md.append("| --- | --- | ---: | ---: | ---: |")
+        md.append(f"| 3 跳内**可达**（实际跳数均 {r.get('hops_avg', 0)}） | A 递归 CTE | {r['plan_a_p50']} ms | {r['plan_a_p95']} ms | {r['rows_returned_avg']} |")
+        md.append(f"| 3 跳内**可达** | B 路径表 | {r['plan_b_p50']} ms | {r['plan_b_p95']} ms | {r['rows_B_avg']} |")
+        md.append(f"| 3 跳内**不可达** | A 递归 CTE | {u['plan_a_p50']} ms | {u['plan_a_p95']} ms | {u['rows_returned_avg']} |")
+        md.append(f"| 3 跳内**不可达** | B 路径表 | {u['plan_b_p50']} ms | {u['plan_b_p95']} ms | {u['rows_B_avg']} |")
+        md.append("")
+        ratio = round(r['plan_a_p50'] / max(r['plan_b_p50'], 0.001), 1)
+        delta = round(r['plan_a_p50'] - u['plan_a_p50'], 3)
+        md.append(f"**结论（按实测写，不按预期写）**：真有路径时方案 A 的 P50 是 {r['plan_a_p50']} ms，"
+                  f"比它自己的判空（{u['plan_a_p50']} ms）只高 {delta} ms；方案 B 是 {r['plan_b_p50']} ms，"
+                  f"A 是 B 的 **{ratio}×**。也就是说第 1 节 Q4 那组数字并不是「判空掩盖了递归代价」，"
+                  "3 跳邻域本身很小，递归展开在 20k/100k 这个规模下确实只要亚毫秒。\n")
+        md.append("**但这条结论有边界，不能外推**：本次只测到 3 跳。递归 CTE 的代价随跳数与度数增长，"
+                  "而闭包/路径表是常数级查表——跳到 5～6 跳、或度数十倍增长后，两者必然拉开。"
+                  "真实引荐场景若需要 4 跳以上，必须先用同一脚本把跳数调上去重测，不能直接引用本节数字。\n")
+        hd = r.get("hops_dist") or {}
+        hd_txt = " / ".join(f"{k} 跳 {v} 个" for k, v in sorted(hd.items(), key=lambda kv: int(kv[0])))
+        md.append(f"跳数分布（可达样本）：{hd_txt}。\n")
 
     md_text = "\n".join(md) + "\n"
     md_path = os.path.join(out_dir, "BENCHMARK.md")

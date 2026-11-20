@@ -1,0 +1,28 @@
+{
+  "runs_per_pair": 10,
+  "pairs": 100,
+  "seed": 42,
+  "reachable": {
+    "plan_a_p50": 0.451,
+    "plan_a_p95": 0.731,
+    "plan_b_p50": 0.238,
+    "plan_b_p95": 0.353,
+    "rows_returned_avg": 1.0,
+    "rows_B_avg": 1.0,
+    "hops_avg": 2.71,
+    "hops_dist": {
+      "1": 4,
+      "2": 21,
+      "3": 75
+    }
+  },
+  "unreachable": {
+    "plan_a_p50": 0.406,
+    "plan_a_p95": 0.615,
+    "plan_b_p50": 0.223,
+    "plan_b_p95": 0.307,
+    "rows_returned_avg": 0.0,
+    "rows_B_avg": 0.0
+  },
+  "note": "主压测的 Q4 命中率仅 0.6%，其 P95 主要反映判空；本节把可达/不可达分开测，暴露真实路径查询代价"
+}

@@ -1,0 +1,28 @@
+{
+  "rounds": 30,
+  "seed": 42,
+  "note": "局部删除 + 局部重算，属保守上界；每轮后 ROLLBACK，数据规模不变",
+  "affected_src_avg": 3.87,
+  "edge_insert": {
+    "p50": 0.414,
+    "p95": 0.752,
+    "max": 2.331
+  },
+  "closure2_refresh": {
+    "p50": 1.979,
+    "p95": 4.217,
+    "rows_p50": 154,
+    "rows_max": 503
+  },
+  "org_reach3_refresh": {
+    "p50": 4.261,
+    "p95": 9.781,
+    "rows_p50": 419,
+    "rows_max": 1313
+  },
+  "total_per_edge": {
+    "p50": 6.986,
+    "p95": 13.616,
+    "max": 14.853
+  }
+}
